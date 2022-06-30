@@ -1,2 +1,3 @@
 # Recommendation-system-for-realtor
- Recommendation-system-for-realtor-DACNTT2
+
+Hệ thống gợi ý sản phẩm cho DACNTT 2, made by Nguyễn Quang Lộc
