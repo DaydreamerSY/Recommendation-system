@@ -52,7 +52,7 @@ class Recommender:
     """
 
     def __init__(
-        self, user_data, database, cal_cols, based_on, sort_by, scaler, top=None
+        self, user_data, database, cal_cols, sort_by, scaler, top=5, based_on=None
     ) -> None:
         """
         user_data: last visited post of users
@@ -127,7 +127,62 @@ class Recommender:
 
         return recommended_posts
 
+    def get_recommended_without_based_on(self):
+        # Create a copy of each working dataframe, make sure
+        # they don't affect outside dataframe of this class,
+        # in this case is self.database because we'll use self.database
+        # for result.
+        self.cal_database = self.database.copy()
 
+        # Apply scaler transform to self.cal_database and
+        # self.user_last_visited for normalizing data.
+        self.cal_database[self.cal_cols] = self.scaler.transform(
+            self.database[self.cal_cols]
+        )
+        self.user_last_visited[self.cal_cols] = self.scaler.transform(
+            self.user_last_visited[self.cal_cols]
+        )
+
+        data_same_region = self.cal_database.copy()
+
+        # Apply Euclidean for calculate distance data_same_region.
+        # and self.user_last_visited
+        data_same_region["score"] = cdist(
+            data_same_region[self.cal_cols],
+            self.user_last_visited[self.cal_cols],
+            metric="euclidean",
+        )
+
+        # Extract sorted "id" (self.sort_by) to list.
+        df_result = data_same_region.sort_values("score", ascending=True)
+        recommended_id = df_result[self.sort_by].values.tolist()
+
+        # Try to remove last visited post's id from database to prevents.
+        # this will be most similar
+        visited_id = self.user_last_visited[self.sort_by].values.tolist()[0]
+        try:
+            recommended_id.remove(visited_id)
+        except:
+            pass
+
+        # Create pandas.DataFrame() contains most similar posts from user's data.
+        recommended_posts = pd.DataFrame(columns=self.cal_database.columns)
+
+        for ordered_id in recommended_id:
+            recommended_posts = pd.concat(
+                [
+                    recommended_posts,
+                    self.database[self.database[self.sort_by] == ordered_id],
+                ],
+                ignore_index=True,
+            )
+
+        # Get top nlargest item.
+        if not self.nlargest == None:
+            return recommended_posts.head(self.nlargest)
+
+        return recommended_posts
+        
 # if __name__ == "__main__":
 #     database = pd.read_csv("data.csv")
 
